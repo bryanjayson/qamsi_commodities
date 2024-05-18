@@ -26,7 +26,16 @@ column_ranges = {
     'GC1': list(range(42, 48)),
     'S1': list(range(48, 54))}
 
+def min_max_scaling(data, window):
+    scaled_data = data.copy()
+    for col in data.columns:
+        rolling_min = data[col].rolling(window=window, min_periods=1, closed='right').min()
+        rolling_max = data[col].rolling(window=window, min_periods=1, closed='right').max()
+        scaled_data[col] = (data[col] - rolling_min) / (rolling_max - rolling_min)
+    return scaled_data
+
 for commodity in commodities:
+    print(commodity)
     cols = data_all.columns[column_ranges[commodity]].tolist()
     data = data_all.loc[:, cols]
 
@@ -37,27 +46,38 @@ for commodity in commodities:
     data['Log_Returns'] = np.log(data[f'{commodity}_PX_LAST'] / data[f'{commodity}_PX_LAST'].shift(1))
     data['Ret_Tomorrow'] = data['Log_Returns'].shift(-1)
 
-    horizons = [7, 14, 21]
+    horizons = [5, 10, 15]
 
     for horizon in horizons:
-        moving_average = data.rolling(horizon).mean()
+        moving_average = data.rolling(horizon, closed='right').mean()
         col_name = f'{commodity}_MA_{horizon}'
 
         data[col_name] = moving_average[f'{commodity}_PX_LAST']
-        data[f'{commodity}_SD_{horizon}'] = data[f'{commodity}_PX_LAST'].rolling(horizon).std()
+        data[f'{commodity}_SD_{horizon}'] = data[f'{commodity}_PX_LAST'].rolling(horizon, closed='right').std()
+
+    # Calculate RSI
+    delta = -data[f'{commodity}_PX_LAST'].diff(-1)
+    gain = delta.where(delta > 0, 0)
+    loss = -delta.where(delta < 0, 0)
+    avg_gain = gain.rolling(window=14, min_periods=14, closed='right').mean()
+    avg_loss = loss.rolling(window=14, min_periods=14, closed='right').mean()
+
+    rs = avg_gain / avg_loss
+    data[f'{commodity}_RSI'] = 100 - (100 / (1 + rs))
 
     data[f'{commodity}_PX_Lag_1'] = data[f'{commodity}_PX_LAST'].shift(1)
     data[f'{commodity}_PX_Lag_2'] = data[f'{commodity}_PX_LAST'].shift(2)
-    data[f'{commodity}_EMA'] = data[f'{commodity}_PX_LAST'].ewm(span=5).mean()
+    data[f'{commodity}_EMA_10'] = data[f'{commodity}_PX_LAST'].ewm(span=10, adjust=False).mean()
+    data[f'{commodity}_EMA_20'] = data[f'{commodity}_PX_LAST'].ewm(span=20, adjust=False).mean()
+    data[f'{commodity}_MACD'] = data[f'{commodity}_EMA_10'] - data[f'{commodity}_EMA_20']
     data[f'{commodity}_HL'] = data[f'{commodity}_PX_HIGH'] - data[f'{commodity}_PX_LOW']
     data[f'{commodity}_OC'] = data[f'{commodity}_PX_OPEN'] - data[f'{commodity}_PX_LAST']
 
     data.dropna(inplace=True)
 
+    # apply rolling window Min-Max scaling for NN
+    window_size = 15
+    scaled_data = min_max_scaling(data, window_size)
+
     data.to_pickle(os.path.join(storage, 'raw', f'{commodity}.pkl'))
-    print(commodity)
-
-
-#### IMPLEMENT SCALING FOR NN
-
-print()
+    scaled_data.to_pickle(os.path.join(storage, 'raw', f'{commodity}_scaled.pkl'))

@@ -138,6 +138,9 @@ def auto_garch_mod(data, commodity, max_p, max_q, t_set_size=0.8):
     opt_model, opt_order, opt_aic = fit_garch(train, max_p, max_q)
 
     forecast = opt_model.forecast(horizon=len(test))
+    if 'h.1' not in forecast.mean.columns:
+        raise Exception('Forecast does not contain h.1. Check model configuration and forecast horizon.')
+
     predicted_log_returns = forecast.mean['h.1'].iloc[-len(test):]
 
     last_train_price = data[f'{commodity}_PX_LAST'].iloc[split_point - 1]

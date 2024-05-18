@@ -14,8 +14,8 @@ commodities = ['LC1', 'CO1', 'CT1', 'NG1', 'HG1', 'W1', 'GC1', 'S1']
 
 n_est = 500
 
-model_class = GradientBoostingClassifier(n_estimators=n_est, min_samples_split=2, max_depth=10, random_state=2)
-model_reg = GradientBoostingRegressor(n_estimators=n_est, min_samples_split=2, max_depth=10, random_state=2)
+model_class = RandomForestClassifier(n_estimators=n_est, min_samples_split=2, max_depth=20, random_state=4)
+model_reg = RandomForestRegressor(n_estimators=n_est, min_samples_split=2, max_depth=20, random_state=4)
 
 
 def predict_dir(train, test, predictors, model, confidence=0.6):
@@ -44,7 +44,7 @@ def predict_ret(train, test, predictors, model):
     return combined_ret
 
 
-def backtest(data, model_class, model_reg, predictors, t_set_size=0.8, confidence=0.55):
+def rf_fit(data, model_class, model_reg, predictors, t_set_size=0.8, confidence=0.50):
     split_point = int(len(data) * t_set_size)
     train, test = data[:split_point], data[split_point:]
 
@@ -66,9 +66,10 @@ for commodity in commodities:
     data = pd.read_pickle(os.path.join(storage, 'raw', f'{commodity}.pkl'))
     data.dropna()
 
-    predictors = [f'{commodity}_MA_7', f'{commodity}_MA_14', f'{commodity}_MA_21', f'{commodity}_SD_7',
-                  f'{commodity}_SD_14', f'{commodity}_HL', f'{commodity}_OC', f'{commodity}_PX_VOLUME',
-                  f'{commodity}_PX_LAST', f'{commodity}_PX_HIGH', f'{commodity}_PX_LOW', f'{commodity}_EMA',
-                  f'{commodity}_PX_Lag_1', f'{commodity}_PX_Lag_2']
+    predictors = [f'{commodity}_MA_5', f'{commodity}_MA_10', f'{commodity}_MA_15', f'{commodity}_SD_5',
+                  f'{commodity}_SD_10', f'{commodity}_SD_15', f'{commodity}_HL', f'{commodity}_OC',
+                  f'{commodity}_OPEN_INT', f'{commodity}_PX_VOLUME', f'{commodity}_PX_LAST', f'{commodity}_PX_HIGH',
+                  f'{commodity}_PX_LOW', f'{commodity}_PX_OPEN', f'{commodity}_PX_Lag_1', f'{commodity}_PX_Lag_2',
+                  f'{commodity}_EMA_10', f'{commodity}_EMA_20', f'{commodity}_MACD', f'{commodity}_RSI']
 
-    rf_predictions = backtest(data, model_class, model_reg, predictors, confidence=0.55)
+    rf_predictions = rf_fit(data, model_class, model_reg, predictors, t_set_size=0.94, confidence=0.6)
