@@ -24,15 +24,19 @@ column_ranges = {
     'HG1': list(range(30, 36)),
     'W1': list(range(36, 42)),
     'GC1': list(range(42, 48)),
-    'S1': list(range(48, 54))}
+    'S1': list(range(48, 54))
+}
 
-def min_max_scaling(data, window):
-    scaled_data = data.copy()
+
+def rolling_standard_scaling(data, window):
+    scaled_data = pd.DataFrame(index=data.index)
     for col in data.columns:
-        rolling_min = data[col].rolling(window=window, min_periods=1, closed='right').min()
-        rolling_max = data[col].rolling(window=window, min_periods=1, closed='right').max()
-        scaled_data[col] = (data[col] - rolling_min) / (rolling_max - rolling_min)
+        rolling_mean = data[col].rolling(window=window, min_periods=1, closed='right').mean()
+        rolling_std = data[col].rolling(window=window, min_periods=1, closed='right').std()
+        rolling_std = rolling_std.replace(0, 1e-9)
+        scaled_data[f'SC_{col}'] = (data[col] - rolling_mean) / rolling_std
     return scaled_data
+
 
 for commodity in commodities:
     print(commodity)
@@ -73,11 +77,17 @@ for commodity in commodities:
     data[f'{commodity}_HL'] = data[f'{commodity}_PX_HIGH'] - data[f'{commodity}_PX_LOW']
     data[f'{commodity}_OC'] = data[f'{commodity}_PX_OPEN'] - data[f'{commodity}_PX_LAST']
 
-    data.dropna(inplace=True)
+    # Apply rolling window standard scaling
+    scaling = 0
 
-    # apply rolling window Min-Max scaling for NN
-    window_size = 15
-    scaled_data = min_max_scaling(data, window_size)
+    if scaling == 1:
+        window_size = 60
+        scaled_data = rolling_standard_scaling(data, window_size)
 
-    data.to_pickle(os.path.join(storage, 'raw', f'{commodity}.pkl'))
-    scaled_data.to_pickle(os.path.join(storage, 'raw', f'{commodity}_scaled.pkl'))
+        # Combine original and scaled data
+        combined_data = pd.concat([data, scaled_data], axis=1)
+        combined_data.dropna(inplace=True)
+        combined_data.to_pickle(os.path.join(storage, 'raw', f'{commodity}.pkl'))
+
+    else:
+        data.to_pickle(os.path.join(storage, 'raw', f'{commodity}.pkl'))

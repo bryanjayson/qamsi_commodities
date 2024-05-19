@@ -12,7 +12,7 @@ storage = os.path.join(directory, 'data')
 
 commodities = ['LC1', 'CO1', 'CT1', 'NG1', 'HG1', 'W1', 'GC1', 'S1']
 
-n_est = 500
+n_est = 5000
 
 model_class = RandomForestClassifier(n_estimators=n_est, min_samples_split=2, max_depth=20, random_state=4)
 model_reg = RandomForestRegressor(n_estimators=n_est, min_samples_split=2, max_depth=20, random_state=4)
@@ -30,9 +30,8 @@ def predict_dir(train, test, predictors, model, confidence=0.6):
 
 def predict_price(train, test, predictors, model):
     model.fit(train[predictors], train['Price_Tomorrow'])
-    predictions_price = model.predict(test[predictors])
-    predictions_price = pd.Series(predictions_price, index=test.index, name='Predictions_Price')
-    combined_price = pd.concat([test['Price_Tomorrow'], predictions_price], axis=1)
+    predictions_price = pd.Series(model.predict(test[predictors]), index=test.index, name="Predictions_Price")
+    combined_price = pd.concat([test['Price'], predictions_price], axis=1)
     return combined_price
 
 
@@ -40,7 +39,7 @@ def predict_ret(train, test, predictors, model):
     model.fit(train[predictors], train['Ret_Tomorrow'])
     predictions_return = model.predict(test[predictors])
     predictions_return = pd.Series(predictions_return, index=test.index, name='Predictions_Ret')
-    combined_ret = pd.concat([test['Ret_Tomorrow'], predictions_return], axis=1)
+    combined_ret = pd.concat([test['Log_Returns'], predictions_return], axis=1)
     return combined_ret
 
 
@@ -66,10 +65,13 @@ for commodity in commodities:
     data = pd.read_pickle(os.path.join(storage, 'raw', f'{commodity}.pkl'))
     data.dropna()
 
+    rename = {f'{commodity}_PX_LAST': 'Price'}
+    data.rename(columns=rename, inplace=True)
+
     predictors = [f'{commodity}_MA_5', f'{commodity}_MA_10', f'{commodity}_MA_15', f'{commodity}_SD_5',
                   f'{commodity}_SD_10', f'{commodity}_SD_15', f'{commodity}_HL', f'{commodity}_OC',
-                  f'{commodity}_OPEN_INT', f'{commodity}_PX_VOLUME', f'{commodity}_PX_LAST', f'{commodity}_PX_HIGH',
+                  f'{commodity}_OPEN_INT', f'{commodity}_PX_VOLUME', f'Price', f'{commodity}_PX_HIGH',
                   f'{commodity}_PX_LOW', f'{commodity}_PX_OPEN', f'{commodity}_PX_Lag_1', f'{commodity}_PX_Lag_2',
                   f'{commodity}_EMA_10', f'{commodity}_EMA_20', f'{commodity}_MACD', f'{commodity}_RSI']
 
-    rf_predictions = rf_fit(data, model_class, model_reg, predictors, t_set_size=0.94, confidence=0.6)
+    rf_predictions = rf_fit(data, model_class, model_reg, predictors, t_set_size=0.9, confidence=0.55)

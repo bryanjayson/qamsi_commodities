@@ -11,7 +11,7 @@ config = os.path.join(directory, 'config')
 storage = os.path.join(directory, 'data')
 
 commodities = ["LC1", "CO1", "CT1", "NG1", "HG1", "W1", "GC1", "S1"]
-models = ['arima', 'rf']
+models = ['rf', 'lstm']
 
 
 def plot_preds(commodity, model):
