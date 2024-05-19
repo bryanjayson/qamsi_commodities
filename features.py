@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import os
+from statsmodels.tsa.stattools import adfuller
 
 script_path = os.path.abspath(__file__)
 directory = os.path.dirname(script_path)
@@ -26,13 +27,20 @@ column_ranges = {
     'GC1': list(range(42, 48)),
     'S1': list(range(48, 54))}
 
-def min_max_scaling(data, window):
-    scaled_data = data.copy()
-    for col in data.columns:
-        rolling_min = data[col].rolling(window=window, min_periods=1, closed='right').min()
-        rolling_max = data[col].rolling(window=window, min_periods=1, closed='right').max()
-        scaled_data[col] = (data[col] - rolling_min) / (rolling_max - rolling_min)
-    return scaled_data
+
+def test_stationarity(dataframe):
+    results = {}
+    for column in dataframe.columns:
+        test_result = adfuller(dataframe[column].dropna())
+
+        p_value = test_result[1]
+        is_stationary = p_value < 0.05
+        results[column] = is_stationary
+
+        print(f"Column: {column}, Stationary: {is_stationary}")
+
+    return results
+
 
 for commodity in commodities:
     print(commodity)
@@ -40,13 +48,15 @@ for commodity in commodities:
     data = data_all.loc[:, cols]
 
     # Setting target (1 means price tomorrow is higher than price today), calculating returns
-    data['Price_Tomorrow'] = data[f'{commodity}_PX_LAST'].shift(-1)
-    data['Direction_Tomorrow'] = (data['Price_Tomorrow'] > data[f'{commodity}_PX_LAST']).astype(int)
-    data['Direction'] = data['Direction_Tomorrow'].shift(1)
-    data['Log_Returns'] = np.log(data[f'{commodity}_PX_LAST'] / data[f'{commodity}_PX_LAST'].shift(1))
-    data['Ret_Tomorrow'] = data['Log_Returns'].shift(-1)
+    data[f'{commodity}_Log_Price'] = np.log(data[f'{commodity}_PX_LAST'])
+    data[f'{commodity}_Price_Tomorrow'] = data[f'{commodity}_PX_LAST'].shift(-1)
+    data[f'{commodity}_Log_Price_Tomorrow'] = np.log(data[f'{commodity}_Log_Price'])
+    data[f'{commodity}_Direction_Tomorrow'] = (data[f'{commodity}_Price_Tomorrow'] > data[f'{commodity}_PX_LAST']).astype(int)
+    data[f'{commodity}_Direction'] = data[f'{commodity}_Direction_Tomorrow'].shift(1)
+    data[f'{commodity}_Log_Returns'] = np.log(data[f'{commodity}_PX_LAST'] / data[f'{commodity}_PX_LAST'].shift(1))
+    data[f'{commodity}_Ret_Tomorrow'] = data[f'{commodity}_Log_Returns'].shift(-1)
 
-    horizons = [5, 10, 15]
+    horizons = [10, 20]
 
     for horizon in horizons:
         moving_average = data.rolling(horizon, closed='right').mean()
@@ -65,19 +75,14 @@ for commodity in commodities:
     rs = avg_gain / avg_loss
     data[f'{commodity}_RSI'] = 100 - (100 / (1 + rs))
 
-    data[f'{commodity}_PX_Lag_1'] = data[f'{commodity}_PX_LAST'].shift(1)
-    data[f'{commodity}_PX_Lag_2'] = data[f'{commodity}_PX_LAST'].shift(2)
+    data[f'{commodity}_Return_Lag_1'] = data[f'{commodity}_Log_Returns'].shift(1)
+    data[f'{commodity}_Return_Lag_2'] = data[f'{commodity}_Log_Returns'].shift(2)
     data[f'{commodity}_EMA_10'] = data[f'{commodity}_PX_LAST'].ewm(span=10, adjust=False).mean()
     data[f'{commodity}_EMA_20'] = data[f'{commodity}_PX_LAST'].ewm(span=20, adjust=False).mean()
     data[f'{commodity}_MACD'] = data[f'{commodity}_EMA_10'] - data[f'{commodity}_EMA_20']
     data[f'{commodity}_HL'] = data[f'{commodity}_PX_HIGH'] - data[f'{commodity}_PX_LOW']
     data[f'{commodity}_OC'] = data[f'{commodity}_PX_OPEN'] - data[f'{commodity}_PX_LAST']
 
-    data.dropna(inplace=True)
-
-    # apply rolling window Min-Max scaling for NN
-    window_size = 15
-    scaled_data = min_max_scaling(data, window_size)
-
     data.to_pickle(os.path.join(storage, 'raw', f'{commodity}.pkl'))
-    scaled_data.to_pickle(os.path.join(storage, 'raw', f'{commodity}_scaled.pkl'))
+
+    test_stationarity(data)
