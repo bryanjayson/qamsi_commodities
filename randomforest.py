@@ -8,12 +8,12 @@ directory = os.path.dirname(script_path)
 config = os.path.join(directory, 'config')
 storage = os.path.join(directory, 'data')
 
-commodities = ['CO1', 'HG1', 'S1', 'NG1', 'CT1']
+commodities = ['CO1', 'HG1', 'S1', 'NG1', 'CT1', 'W1', 'GC1', 'LC1']
 
-n_est = 9000
-gap_days = 40
+n_est = 8000
+gap_days = 0
 
-model_class = RandomForestClassifier(n_estimators=n_est, min_samples_split=4, max_depth=5,
+model_class = RandomForestClassifier(n_estimators=n_est, min_samples_split=4, max_depth=4,
                                      random_state=4, criterion="entropy")
 model_reg = RandomForestRegressor(n_estimators=n_est, min_samples_split=4, max_depth=10,
                                   random_state=4, criterion="squared_error")
@@ -54,6 +54,7 @@ def rf_fit(commodity, data, model_class, model_reg, predictors, split_date, conf
 
     # split the dataset into training, gap, and testing sets
     train = data[data.index < gap_start_date]
+    print(len(train))
     gap = data[(data.index >= gap_start_date) & (data.index < split_date)]
     test = data[data.index >= split_date]
 
@@ -78,11 +79,10 @@ for commodity in commodities:
     data = pd.read_pickle(os.path.join(storage, 'raw', f'{commodity}.pkl'))
     data.dropna()
 
-    test_set_size = 252 / len(data)
-
     predictors = [f'{commodity}_PX_LAST', f'{commodity}_MA_20',
                   f'{commodity}_SD_20', f'{commodity}_HL', f'{commodity}_OC',
                   f'{commodity}_OPEN_INT', f'{commodity}_PX_VOLUME', f'{commodity}_EMA_20',
                   f'{commodity}_MACD', f'{commodity}_RSI']
 
-    rf_predictions = rf_fit(commodity, data, model_class, model_reg, predictors, split_date="2023-05-01", confidence=0.5)
+    rf_predictions = rf_fit(commodity, data, model_class, model_reg,
+                            predictors, split_date="2023-05-01", confidence=0.5)

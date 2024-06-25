@@ -11,9 +11,9 @@ script_path = os.path.abspath(__file__)
 directory = os.path.dirname(script_path)
 storage = os.path.join(directory, 'data')
 
-commodities = ['CT1']
-split_date = "2023-05-01"
-gap_days = 40
+commodities = ['CO1', 'HG1', 'S1', 'NG1', 'CT1', 'W1', 'GC1', 'LC1']
+split_date = "2023-04-19"
+gap_days = 0
 
 for commodity in commodities:
     data = pd.read_pickle(os.path.join(storage, 'raw', f'{commodity}.pkl'))
@@ -30,7 +30,7 @@ for commodity in commodities:
     targets = [f'{commodity}_Log_Price_Tomorrow', f'{commodity}_Direction_Tomorrow']
     results = {}
 
-    time_steps = 40
+    time_steps = 10
     batch_size = 32
 
     test_start_date = pd.to_datetime(split_date)
@@ -79,7 +79,7 @@ for commodity in commodities:
             LSTM(175, input_shape=(time_steps, X_train_scaled.shape[1]), return_sequences=True),
             Dropout(0.2),
             LSTM(150),
-            Dropout(0.1),
+            Dropout(0.2),
             Dense(100, activation='relu'),
             Dense(1 if model_type == 'regression' else 1, activation=last_activation)
         ])
@@ -88,7 +88,8 @@ for commodity in commodities:
         model.summary()
 
         callbacks = [EarlyStopping(monitor=monitor_metric, patience=70, restore_best_weights=True),
-                     ModelCheckpoint(os.path.join(directory, 'best_model', f'best_model_{target}.keras'), monitor=monitor_metric, save_best_only=True)]
+                     ModelCheckpoint(os.path.join(directory, 'best_model', f'best_model_{target}.keras'),
+                                     monitor=monitor_metric, save_best_only=True)]
 
         model.fit(train_generator, epochs=200, validation_data=test_generator, callbacks=callbacks, verbose=1)
 
@@ -102,10 +103,12 @@ for commodity in commodities:
         actual_values = test.loc[adjusted_dates, target]
 
         if model_type == 'regression':
-            results_df = pd.DataFrame({'Price': np.exp(actual_values), 'Pred_Price': np.exp(predictions.flatten())}, index=adjusted_dates)
+            results_df = pd.DataFrame({'Price': np.exp(actual_values),
+                                       'Pred_Price': np.exp(predictions.flatten())}, index=adjusted_dates)
         else:
             actual_labels = [test.loc[date, target] for date in adjusted_dates]
-            results_df = pd.DataFrame({'Dir': actual_labels, 'Pred_Dir': predictions.flatten()}, index=adjusted_dates)
+            results_df = pd.DataFrame({'Dir': actual_labels,
+                                       'Pred_Dir': predictions.flatten()}, index=adjusted_dates)
 
         results_df = results_df.shift(1)
         results_df.dropna(inplace=True)

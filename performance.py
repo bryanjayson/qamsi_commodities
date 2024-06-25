@@ -12,7 +12,7 @@ directory = os.path.dirname(script_path)
 config = os.path.join(directory, 'config')
 storage = os.path.join(directory, 'data')
 
-commodities = ['CO1', 'HG1', 'S1', 'NG1', 'CT1']
+commodities = ['CO1', 'HG1', 'S1', 'NG1', 'CT1', 'W1', 'GC1', 'LC1']
 models = ['rf', 'lstm']
 
 
@@ -26,9 +26,9 @@ def plot_preds(commodity, model):
 
         rcParams['font.family'] = 'DejaVu Sans'
 
-        plt.figure(figsize=(8, 6))
-        plt.plot(df.index, df['Price'], 'b-', label='Actual', marker='s', markersize=3, linewidth=0.7)
-        plt.plot(df.index, df['Pred_Price'], 'r-', label='Predicted', marker='o', markersize=3, linewidth=0.7)
+        plt.figure(figsize=(6, 4))
+        plt.plot(df.index, df['Price'], 'b-', label='Actual', marker='', markersize=3, linewidth=1.5)
+        plt.plot(df.index, df['Pred_Price'], 'r-', label='Predicted', marker='', markersize=3, linewidth=1.5)
 
         plt.xlabel('Date')
         plt.ylabel('Price')
