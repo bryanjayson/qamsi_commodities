@@ -62,7 +62,7 @@ def prediction_strat(commodity, model, start_date):
         if trade_signal == 1:
             predictions.iloc[i, predictions.columns.get_loc('Daily_Log_Return')] = log_return
         elif trade_signal == 0:
-            predictions.iloc[i, predictions.columns.get_loc('Daily_Log_Return')] = -log_return
+            predictions.iloc[i, predictions.columns.get_loc('Daily_Log_Return')] = 0
 
     # calculate cumulative returns from the start date
     predictions['Cumulative_Log_Return'] = predictions['Daily_Log_Return'].cumsum()
@@ -190,7 +190,7 @@ def plot_prices_split(commodities, start_date=None):
         plt.close()
 
 
-commodities = ['CO1', 'HG1', 'S1', 'NG1', 'CT1', 'W1', 'GC1', 'LC1']
+commodities = ['NG1']
 start_date = "2023-05-01"
 
 

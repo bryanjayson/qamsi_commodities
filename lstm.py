@@ -91,7 +91,7 @@ for commodity in commodities:
                      ModelCheckpoint(os.path.join(directory, 'best_model', f'best_model_{target}.keras'),
                                      monitor=monitor_metric, save_best_only=True)]
 
-        model.fit(train_generator, epochs=200, validation_data=test_generator, callbacks=callbacks, verbose=1)
+        model.fit(train_generator, epochs=1, validation_data=test_generator, callbacks=callbacks, verbose=1)
 
         predictions = model.predict(test_generator)
         if model_type == 'regression':

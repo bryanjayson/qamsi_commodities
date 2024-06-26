@@ -100,7 +100,9 @@ for commodity in commodities:
         'Mean': data[f'{commodity}_PX_LAST'].mean(),
         'Minimum': data[f'{commodity}_PX_LAST'].min(),
         'Maximum': data[f'{commodity}_PX_LAST'].max(),
-        'Standard Deviation': data[f'{commodity}_PX_LAST'].std()
+        'Standard Deviation': data[f'{commodity}_PX_LAST'].std(),
+        'Mean OI': data[f'{commodity}_OPEN_INT'].mean(),
+        'Mean Volume': data[f'{commodity}_PX_VOLUME'].mean()
     }
     summary_data.append(summary_stats)
 
